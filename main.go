@@ -7,15 +7,26 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 )
 
 func main() {
+	var signals = make(chan os.Signal)
+	go func() {
+		go signal.Notify(signals, syscall.SIGHUP)
+		for range signals {
+			log.Printf("HUP")
+		}
+	}()
+
 	http.Handle("/asset/", assetPrefix(http.FileServer(http.Dir("./assets"))))
 	http.Handle("/data/", http.StripPrefix("/data", http.HandlerFunc(dataHandler)))
 
@@ -60,13 +71,13 @@ func bootloader(file string) http.HandlerFunc {
 		}
 
 		tmpl := parseTmpl(data)
-		hash := randHash()
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache, private")
 
-		head := `<script>var Featherhead = {"commit":"` + hash + `","repo":"fhdevd","ref":"refs/heads/master","master-domain":"localhost:3080","cdn-domain":"localhost:3080","app-domain":"localhost:3080"};</script>`
+		head := `<script>var Featherhead = {"commit":"` + bootHash + `","repo":"fhdevd","ref":"refs/heads/master","master-domain":"localhost:3080","cdn-domain":"localhost:3080","app-domain":"localhost:3080"};</script>`
 
-		_, _, err = tmpl.writeTo(w, []byte(head), []byte("/asset/fhdevd/"+hash+"/"))
+		_, _, err = tmpl.writeTo(w, []byte(head), []byte("/asset/fhdevd/"+bootHash+"/"))
 		if err != nil {
 			panic(err)
 		}
@@ -260,12 +271,15 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, private")
 
 	err = json.NewEncoder(w).Encode(&resp)
 	if err != nil {
 		panic(err)
 	}
 }
+
+var bootHash = randHash()
 
 func randHash() string {
 	var d [20]byte
