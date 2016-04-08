@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
 	"path"
@@ -39,9 +41,16 @@ func main() {
 			if !strings.HasSuffix(prefix, "/") {
 				prefix += "/"
 			}
-			file := path.Join(".", arg[idx+1:])
-			fmt.Printf("mapped %q to %q\n", prefix, file)
-			http.Handle(prefix, bootloader(file))
+
+			target := arg[idx+1:]
+			if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
+				fmt.Printf("forwarding %q to %q\n", prefix, target)
+				http.Handle(prefix, http.StripPrefix(strings.TrimRight(prefix, "/"), proxy(target)))
+			} else {
+				file := path.Join(".", target)
+				fmt.Printf("mapped %q to %q\n", prefix, file)
+				http.Handle(prefix, bootloader(file))
+			}
 		} else {
 			err := os.Chdir(arg)
 			if err != nil {
@@ -82,6 +91,18 @@ func bootloader(file string) http.HandlerFunc {
 			panic(err)
 		}
 	}
+}
+
+func proxy(target string) http.Handler {
+	t, err := url.Parse(target)
+	if err != nil {
+		log.Fatalf("invalid url: %q (%s)", target, err)
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.RequestURI = r.URL.RequestURI()
+		r.Host = t.Host
+		httputil.NewSingleHostReverseProxy(t).ServeHTTP(w, r)
+	})
 }
 
 type template struct {
