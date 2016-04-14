@@ -1,0 +1,23 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"path": "context",
+			"revision": ""
+		},
+		{
+			"checksumSHA1": "d/VvfctTYNJS/KLdUx/J+M0SJsU=",
+			"path": "github.com/limbo-services/proc",
+			"revision": "9ecb472ed77116c4ff4a1f2f3c74e28349d1c04d",
+			"revisionTime": "2016-04-04T14:30:38Z"
+		},
+		{
+			"checksumSHA1": "pancewZW3HwGvpDwfH5Imrbadc4=",
+			"path": "golang.org/x/net/context",
+			"revision": "fb93926129b8ec0056f2f458b1f519654814edf0",
+			"revisionTime": "2016-04-12T22:48:50Z"
+		}
+	],
+	"rootPath": "github.com/fd/fhdevd"
+}
